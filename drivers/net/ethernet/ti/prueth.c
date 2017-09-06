@@ -3639,6 +3639,52 @@ static int emac_ndo_set_features(struct net_device *ndev,
 	return 0;
 }
 
+/**
+ * emac_ndo_set_rx_mode - EMAC set receive mode function
+ * @ndev: The EMAC network adapter
+ *
+ * Called when system wants to set the receive mode of the device.
+ *
+ */
+static void emac_ndo_set_rx_mode(struct net_device *ndev)
+{
+	struct prueth_emac *emac = netdev_priv(ndev);
+	struct prueth *prueth = emac->prueth;
+	struct prueth_mmap_sram_cfg *s = &prueth->mmap_sram_cfg;
+	void __iomem *sram = prueth->mem[PRUETH_MEM_SHARED_RAM].va;
+	u32 reg, mask;
+
+	if (PRUETH_HAS_SWITCH(prueth)) {
+		netdev_err(ndev,
+			   "%s: promisc mode not supported for switch\n",
+			   __func__);
+		return;
+	}
+
+	reg = readl(sram + s->eof_48k_buffer_bd + EMAC_PROMISCUOUS_MODE_OFFSET);
+	switch (emac->port_id) {
+	case PRUETH_PORT_MII0:
+		mask = EMAC_P1_PROMISCUOUS_BIT;
+		break;
+	case PRUETH_PORT_MII1:
+		mask = EMAC_P2_PROMISCUOUS_BIT;
+		break;
+	default:
+		netdev_err(ndev, "%s: invalid port\n", __func__);
+		return;
+	}
+
+	if (ndev->flags & IFF_PROMISC) {
+		/* Enable promiscuous mode */
+		reg |= mask;
+	} else {
+		/* Disable promiscuous mode */
+		reg &= ~mask;
+	}
+
+	writel(reg, sram + s->eof_48k_buffer_bd + EMAC_PROMISCUOUS_MODE_OFFSET);
+}
+
 static const struct net_device_ops emac_netdev_ops = {
 	.ndo_open = emac_ndo_open,
 	.ndo_stop = emac_ndo_stop,
@@ -3648,6 +3694,7 @@ static const struct net_device_ops emac_netdev_ops = {
 	.ndo_change_mtu	= eth_change_mtu,
 	.ndo_tx_timeout = emac_ndo_tx_timeout,
 	.ndo_get_stats = emac_ndo_get_stats,
+	.ndo_set_rx_mode = emac_ndo_set_rx_mode,
 	.ndo_set_features = emac_ndo_set_features,
 	.ndo_fix_features = emac_ndo_fix_features,
 	/* +++TODO: implement .ndo_setup_tc */
