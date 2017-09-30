@@ -554,6 +554,7 @@ dtb-$(CONFIG_SOC_AM33XX) += \
 	am335x-chiliboard.dtb \
 	am335x-cm-t335.dtb \
 	am335x-evm.dtb \
+	am335x-sbc8600b.dtb \
 	am335x-evmsk.dtb \
 	am335x-icev2.dtb \
 	am335x-lxm.dtb \
